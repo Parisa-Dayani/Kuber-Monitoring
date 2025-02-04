@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: 'cliq-webhook'
+
+    receivers:
+      - name: 'cliq-webhook'
+        webhook_configs:
+          - url: 'https://cliq.zoho.com/company/767068114/api/v2/bots/devopsalert/incoming'
+            #            send_resolved: true
+            #text: |
+            #    *Alert: Pod CrashLoopBackOff Detected*
+            #    Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has exceeded the threshold for CrashLoopBackOff.
