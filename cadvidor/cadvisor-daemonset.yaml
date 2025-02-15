@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cadvisor
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: cadvisor
+  template:
+    metadata:
+      labels:
+        app: cadvisor
+    spec:
+      serviceAccountName: cadvisor
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+       - name: cadvisor
+         image: gcr.io/cadvisor/cadvisor
+         args:
+            - "--port=8085"
+            - "--containerd=/var/run/k3s/containerd/containerd.sock"
+            - "--docker_only=false"
+            - "--housekeeping_interval=10s"
+            - "--store_container_labels=true"
+            - "--whitelisted_container_labels=io.kubernetes.pod.name,io.kubernetes.pod.namespace"
+         ports:
+           - containerPort: 8085
+         volumeMounts:
+          - name: rootfs
+            mountPath: /rootfs
+          - name: var-run
+            mountPath: /var/run
+          - name: sys
+            mountPath: /sys
+          - name: disk
+            mountPath: /dev/disk
+          - name: containerd
+            mountPath: /var/run/k3s/containerd/containerd.sock
+          - name: cgroup
+            mountPath: /sys/fs/cgroup
+      automountServiceAccountToken: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: rootfs
+        hostPath:
+          path: /
+      - name: var-run
+        hostPath:
+          path: /var/run
+      - name: sys
+        hostPath:
+          path: /sys
+      - name: disk
+        hostPath:
+          path: /dev/disk
+      - name: containerd
+        hostPath:
+          path: /var/run/k3s/containerd/containerd.sock
+      - name: cgroup
+        hostPath:
+         path: /sys/fs/cgroup
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadvisor-service
+  namespace: kube-system
+spec:
+  selector:
+    app: cadvisor
+  ports:
+    - protocol: TCP
+      port: 8085
+      targetPort: 8085
+  type: ClusterIP
